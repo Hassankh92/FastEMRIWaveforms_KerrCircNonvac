@@ -280,6 +280,123 @@ KerrCircFlux::~KerrCircFlux()
     delete interps;
 }
 
+// ##################################################################################################################################
+// ############################### New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
+
+void load_and_interpolate_flux_data_kerr_circ_full(struct interp_params *interps, const std::string &few_dir)
+{
+
+    // Load and interpolate the flux data
+    std::string fp = "/few/files/Kerr_flux_minus_PN1_kerr_circ_full.dat";
+    fp = few_dir + fp;
+    ifstream Flux_file(fp);
+
+    if (Flux_file.fail())
+    {
+        throw std::runtime_error("The file Kerr_flux_minus_PN1_kerr_circ_full did not open sucessfully. Make sure it is located in the proper directory (Path/to/Installation/few/files/).");
+    }
+
+    // Load the flux data into arrays
+    string Flux_string;
+    vector<double> ys, as, Edots_Kerr;
+    double y, a, Edot_Kerr;
+    while (getline(Flux_file, Flux_string))
+    {
+
+        stringstream Flux_ss(Flux_string);
+
+        Flux_ss >> y >> a >> Edot_Kerr;
+
+        ys.push_back(y);
+        as.push_back(a);
+        Edots_Kerr.push_back(Edot_Kerr);
+    }
+    // printf("in the kerr load %1.6e, %1.6e\n", a, y);
+
+    // Remove duplicate elements (only works if ys are perfectly repeating with no round off errors)
+    sort(ys.begin(), ys.end());
+    ys.erase(unique(ys.begin(), ys.end()), ys.end());
+
+    sort(as.begin(), as.end());
+    as.erase(unique(as.begin(), as.end()), as.end());
+
+    // notice that if you resort ys and a you have to change also Edots
+
+    Interpolant *Edot_Kerr_interp = new Interpolant(ys, as, Edots_Kerr);
+
+    interps->Edot_Kerr = Edot_Kerr_interp;
+}
+
+// KerrCircFlux_Has
+
+KerrCircFlux_full::KerrCircFlux_full(std::string few_dir)
+{
+    interps = new interp_params;
+    load_and_interpolate_flux_data_kerr_circ_full(interps, few_dir);
+}
+
+double KerrCircFlux_full::EdotPN(double r, double a)
+{
+    double y = pow(1. / (sqrt(r * r * r) + a), 2. / 3.);
+    double res = 6.4 * pow(y, 5);
+    return res;
+}
+
+#define KerrCircFlux_full_num_add_args 0
+#define KerrCircFlux_full_equatorial
+#define KerrCircFlux_full_circular
+#define KerrCircFlux_file1 Kerr_flux_minus_PN1_kerr_circ_full.dat
+__deriv__
+void KerrCircFlux_full::deriv_func(double *pdot, double *edot, double *xdot,
+                                                       double *Omega_phi, double *Omega_theta, double *Omega_r,
+                                                       double epsilon, double a, double p, double e, double x, double *additional_args)
+{
+    
+    KerrGeoCoordinateFrequencies(Omega_phi, Omega_theta, Omega_r, a, p, e, abs(x));
+    *Omega_theta = *Omega_phi;
+    *Omega_r = *Omega_phi;
+    if (a < 0.0){  
+        x = -1.0;
+    }
+    
+    double p_sep = get_separatrix(a, e, x);
+    if (p_sep > p)
+    {
+        *pdot = 0.0;
+        *edot = 0.0;
+        *xdot = 0.0;
+        return;
+    }
+
+    double u = log((p - p_sep + 3.9));
+
+
+    // evaluate ODEs, starting with PN contribution, then interpolating over remaining flux contribution
+
+    double yPNKerr = pow(1. / (sqrt(p * p * p) + a), 2. / 3.);
+
+    double Edot_Kerr = epsilon * (interps->Edot_Kerr->eval(u, a) * pow(yPNKerr, 6.) + EdotPN(p, a));
+    double Ldot_Kerr = Edot_Kerr / *Omega_phi;
+
+    double dL_dp = (-3 * Power(a, 3) + Power(a, 2) * (8 - 3 * p) * Sqrt(p) + (-6 + p) * Power(p, 2.5) + 3 * a * p * (-2 + 3 * p)) / (2. * Power(2 * a + (-3 + p) * Sqrt(p), 1.5) * Power(p, 1.75));
+    *pdot = -Ldot_Kerr / dL_dp;
+
+    *edot = 0.0;
+    *xdot = 0.0;
+}
+
+// destructor
+KerrCircFlux_full::~KerrCircFlux_full()
+{
+
+    delete interps->Edot_Kerr;
+    delete interps;
+}
+
+// ##################################################################################################################################
+// ############################### End of New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
 
 
 

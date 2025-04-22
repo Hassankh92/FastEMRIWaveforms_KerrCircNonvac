@@ -450,3 +450,204 @@ void AmplitudeCarrier_Kerr::Interp2DAmplitude_Kerr(std::complex<double> *amplitu
 }
 
 
+
+
+
+// ##################################################################################################################################
+// ############################### New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
+
+
+const int Nu_full = 99;
+const int Na_full = 199;
+const int Ne_full = 1;
+
+void create_amplitude_interpolant_Kerr_full(hid_t file_id, int l, int m, int n, int Na_full, int Nu_full, int Ne_full, vector<double>& as, vector<double>& us, vector<double>& es,  Interpolant **re, Interpolant **im){
+
+	// amplitude data has a real and imaginary part
+	double *modeData = new double[4*Na_full*Nu_full];
+
+	char dataset_name[50];
+
+	sprintf( dataset_name, "/Clmkn_full/l%dm%dn%d", l,m,n);
+	// printf("dataset %s \n", dataset_name);
+
+	/* read dataset */
+	H5LTread_dataset_double(file_id, dataset_name, modeData);
+
+	vector<double> modeData_re(Na_full*Nu_full);
+	vector<double> modeData_im(Na_full*Nu_full);
+
+	for(int i = 0; i < Na_full; i++)
+    {
+		for(int j = 0; j < Nu_full; j++)
+        {
+			modeData_re[j + Nu_full*i] = modeData[2*(j + Nu_full*i)+0]; //the 1st (0) col is spin the 2nd (1) is u and then it is real and imag parts of Clms
+			modeData_im[j + Nu_full*i] = modeData[2*(j + Nu_full*i) + 1];
+		// printf("debug output line 402 :%d %d \t %1.6e %1.6e \n",i,j, modeData_re[j + Nu*i],modeData_im[j + Nu*i] );
+
+		}
+	}
+
+    // initialize interpolants
+	*re = new Interpolant(us, as, modeData_re);
+	*im = new Interpolant(us, as, modeData_im); //the bug was here
+
+    delete[] modeData;
+}
+
+// *****KERR DATA
+// collect data and initialize amplitude interpolants 
+void load_and_interpolate_amplitude_data_Kerr_full(int lmax, int nmax, struct waveform_amps_Kerr_full *amps, const std::string& few_dir){
+
+	hid_t 	file_id;
+	hsize_t	dims[2];
+
+    std::string fp = "few/files/Clm00_e0.0_lmax_30_full.h5";
+    fp = few_dir + fp;
+	file_id = H5Fopen (fp.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+
+	/* get the dimensions of the dataset */
+	H5LTget_dataset_info(file_id, "/grid", dims, NULL, NULL);
+
+	/* create an appropriately sized array for the data */
+	double *gridRaw = new double[dims[0]*dims[1]];
+
+	/* read dataset */
+	H5LTread_dataset_double(file_id, "/grid", gridRaw);
+
+	vector<double> as(Na_full);
+	vector<double> us(Nu_full);
+	vector<double> es(Ne_full);
+
+
+    // convert p -> y
+	for(int i = 0; i < Nu_full; i++)
+    {
+		 us[i] = gridRaw[3 + 4*i]; 
+		// printf("us: %d %1.5e \n",i, us[i]);
+	}
+
+	for(int i = 0; i < Na_full; i++)
+    {
+		as[i] = gridRaw[0 + 4*Nu_full*i];
+				// printf("spins: %d %1.5e \n",i, as[i]);
+
+	}
+
+		for(int i = 0; i < Ne_full; i++)
+    {
+		es[i] = gridRaw[1 + 4*Nu_full*i];
+	}
+
+
+	for(int l = 2; l <= lmax; l++)
+    {
+			amps->re[l] = new Interpolant**[l+1]; //FOr each l, we have 2l+1 "m" mode, but since we do not need negative "m" then it would be only l+1 "m" modes
+			amps->im[l] = new Interpolant**[l+1]; // we allocate the same amount of memory to imaginary part as well, assuming that the real and imag part are two different variables
+			for(int m = 0; m <= l; m++)
+            {
+				amps->re[l][m] = new Interpolant*[2*nmax +1];
+				amps->im[l][m] = new Interpolant*[2*nmax +1];
+			}
+	}
+
+
+	// Load the amplitude data
+	for(int l = 2; l <= lmax; l++)
+    {
+		for(int m = 0; m <= l; m++)
+        {
+			for(int n = -nmax; n <= nmax; n++) //the bug was here instead of n++ I had m++ :(
+			{
+
+                create_amplitude_interpolant_Kerr_full(file_id, l, m, n, Na_full, Nu_full, Ne_full, as, us, es, &amps->re[l][m][n+nmax], &amps->im[l][m][n+nmax]);
+			}
+		}
+	}
+
+    delete[] gridRaw;
+}
+
+
+
+
+
+// Amplitude Carrier is class for interaction with python carrying gsl interpolant information  for KERR********
+AmplitudeCarrier_Kerr_full::AmplitudeCarrier_Kerr_full(int lmax_,  int nmax_, std::string few_dir)
+{
+    lmax = lmax_;
+	nmax = nmax_;
+
+    amps = new struct waveform_amps_Kerr_full;
+
+    load_and_interpolate_amplitude_data_Kerr_full(lmax, nmax, amps, few_dir);
+	// printf("after load func\n");
+
+}
+
+// need to have dealloc method for cython interface  for KERR********
+void AmplitudeCarrier_Kerr_full::dealloc()
+{
+
+    // clear memory
+    for(int l = 2; l <= lmax; l++)
+    {
+        for(int m = 0; m <= l; m++)
+        {
+			for(int n = -nmax; n <= nmax; n++)
+            {
+
+                delete amps->re[l][m][n+nmax];
+                delete amps->im[l][m][n+nmax];
+            }
+
+            delete amps->re[l][m];
+            delete amps->im[l][m];
+        }
+        delete amps->re[l];
+        delete amps->im[l];
+    }
+    delete amps;
+}
+
+
+// main function for computing amplitudes for KERR********
+void AmplitudeCarrier_Kerr_full::Interp2DAmplitude_Kerr_full(std::complex<double> *amplitude_out, double *a_arr, double *p_arr, double *e_arr, int *l_arr, int *m_arr, int *n_arr, int num, int num_modes)
+{
+
+	// printf("in the interp3d func\n");
+    complex<double> I(0.0, 1.0);
+
+#ifdef __USE_OMP__
+    #pragma omp parallel for collapse(2)
+#endif // __USE_OMP__
+    for (int i=0; i<num; i++)
+    {
+    	for(int mode_i = 0; mode_i < num_modes; mode_i++)
+        {
+            double p = p_arr[i];
+            double a = a_arr[i];
+			double e = e_arr[i];
+			// double e = 0.0;
+			double x = 1.0;
+			double ps = get_separatrix(a,e,x);
+            double u = log((p - ps + 3.9));
+
+            // calculate amplitudes for this mode
+            int l = l_arr[mode_i]; int m = m_arr[mode_i]; int n = n_arr[mode_i]; 
+			amplitude_out[i*num_modes + mode_i]= amps->re[l][m][n+nmax]->eval(u,a) + I*amps->im[l][m][n+nmax]->eval(u,a);
+
+
+
+
+        }
+    }
+}
+
+
+
+
+// ##################################################################################################################################
+// ############################### End of New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################

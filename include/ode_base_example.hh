@@ -42,6 +42,30 @@ public:
     ~KerrCircFlux();
 };
 
+// ##################################################################################################################################
+// ############################### New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
+
+class KerrCircFlux_full
+{
+public:
+    interp_params *interps;
+    Interpolant *amp_vec_norm_interp;
+    double test;
+    KerrCircFlux_full(std::string few_dir);
+
+    double EdotPN(double r, double a);
+
+    void deriv_func(double *pdot, double *edot, double *Ydot,
+                    double *Omega_phi, double *Omega_theta, double *Omega_r,
+                    double epsilon, double a, double p, double e, double Y, double *additional_args);
+    ~KerrCircFlux_full();
+};
+
+
+// ##################################################################################################################################
+// ############################### End of New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
 
 
 

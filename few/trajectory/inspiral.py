@@ -252,6 +252,13 @@ class EMRIInspiral(TrajectoryBase):
         if self.circular:
             e0 = 0.0
 
+        #  To make sure it is consistent with the Kerr retro orbits as we will need x  =-1.0 for
+        #  the separatrix of retro orbits
+        if self.background == "Kerr":
+            if a<0.0:
+                x0 = -1.0
+
+
         # transfer kwargs from parent class
         temp_kwargs = {key: kwargs[key] for key in self.specific_kwarg_keys}
 

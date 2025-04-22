@@ -70,4 +70,30 @@ public:
 };
 
 
+
+// ##################################################################################################################################
+// ############################### New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
+struct waveform_amps_Kerr_full{
+	Interpolant ***re[31];
+	Interpolant ***im[31];
+};
+
+class AmplitudeCarrier_Kerr_full{
+public:
+    struct waveform_amps_Kerr_full *amps;
+    int lmax, nmax;
+
+    AmplitudeCarrier_Kerr_full(int lmax_, int nmax_, std::string few_dir);
+    void Interp2DAmplitude_Kerr_full(std::complex<double> *amplitude_out, double *a_arr, double *p_arr, double *e_arr, int *l_arr, int *m_arr, int *n_arr, int num, int num_modes);
+
+    void dealloc();
+};
+// ##################################################################################################################################
+// ############################### End of New part for retrograde and prograde orbits in vacuum #############################
+// ##################################################################################################################################
+
+
+
+
 #endif //__AMPLITUDE_H__
