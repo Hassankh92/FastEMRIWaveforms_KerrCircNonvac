@@ -855,11 +855,15 @@ def check_for_file_download(fp, few_dir, version_string=None):
 
         # url to zenodo API
         url = "https://zenodo.org/record/" + str(record) + "/files/" + fp
-        url_2 = "https://www.dropbox.com/scl/fo/0i2jjdudxblrbq1qud7gj/APlGwObGDKZVijsGazTto5Y?rlkey=57zz8vk9fn3csj1extn9tbeyk&st=4m356z7f&dl=1"
+        # url_2 = "https://www.dropbox.com/scl/fo/0i2jjdudxblrbq1qud7gj/APlGwObGDKZVijsGazTto5Y?rlkey=57zz8vk9fn3csj1extn9tbeyk&st=4m356z7f&dl=1"
+
+        record_2 = 15263440
+        url_2  = "https://zenodo.org/record/" + str(record_2) + "/files/" + fp
         # run wget from terminal to get the folder
         # download to proper location
         # subprocess.run(["wget", "--no-check-certificate", url])
         result = subprocess.run(["wget", "--no-check-certificate","-P", few_dir + "few/files/" , url])
+        results_2 = subprocess.run(["wget", "--no-check-certificate","-P", few_dir + "few/files/" , url_2])
         # move it into the files folder
         # os.rename(fp, few_dir + "few/files/" + fp)
         # breakpoint()
@@ -867,16 +871,16 @@ def check_for_file_download(fp, few_dir, version_string=None):
         # if result.returncode != 0:
         warnings.warn(
         "\n\n The file {} could not be downloaded from the first URL. Attempting the second URL.\n\n".format(fp))
-        temp_zip_path = os.path.join(few_dir, "few/files/temp_folder.zip")
-        result2 = subprocess.run(["wget", "--no-check-certificate", "-O" ,temp_zip_path , url_2])
-                # If the second download also fails, raise an error
-        if result2.returncode != 0:
-            raise RuntimeError("The file {} could not be downloaded from either URL.".format(fp))
-            # Unzip the downloaded file into the target directory
-        with zipfile.ZipFile(few_dir + "few/files/temp_folder.zip", 'r') as zip_ref:
-            zip_ref.extractall(few_dir + "few/files/")
-        # Remove the temporary zip file
-        os.remove(few_dir + "few/files/temp_folder.zip")
+        # temp_zip_path = os.path.join(few_dir, "few/files/temp_folder.zip")
+        # result2 = subprocess.run(["wget", "--no-check-certificate", "-O" ,temp_zip_path , url_2])
+        #         # If the second download also fails, raise an error
+        # if result2.returncode != 0:
+        #     raise RuntimeError("The file {} could not be downloaded from either URL.".format(fp))
+        #     # Unzip the downloaded file into the target directory
+        # with zipfile.ZipFile(few_dir + "few/files/temp_folder.zip", 'r') as zip_ref:
+        #     zip_ref.extractall(few_dir + "few/files/")
+        # # Remove the temporary zip file
+        # os.remove(few_dir + "few/files/temp_folder.zip")
 
         # os.rename(fp, few_dir + "few/files/" + fp)
 

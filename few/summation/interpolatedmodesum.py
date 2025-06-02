@@ -36,6 +36,7 @@ from few.utils.baseclasses import (
     SchwarzschildEccentric,
     ParallelModuleBase,
     KerrCircular,
+    KerrCircular_full,
 )
 from few.utils.citations import *
 from few.utils.utility import get_fundamental_frequencies

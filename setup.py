@@ -516,11 +516,24 @@ def get_package_location(package_name):
 package_name = "few"  # Replace "few" with the name of the package you want to find the location for
 location = get_package_location(package_name)
 import glob
-folder_path = glob.glob(location+'/'+package_name+'*/few/')[0] + 'files'
-os.makedirs(folder_path)
-print(f"The folder '{folder_path}' was created. Transferring files there")
-the_command = 'cp -r ./few/files/* ' + folder_path + '/'
-os.system(the_command)
-the_command = 'ls ' + folder_path + '/'
-print(f"Showing the folder '{folder_path}")
-os.system(the_command)
+# folder_path = glob.glob(location+'/'+package_name+'*/few/')[0] + 'files'
+folder_path = glob.glob(location+'/'+package_name)[0] + '/files'
+os.makedirs(folder_path, exist_ok=True)
+# print(f"The folder '{folder_path}' was created. Transferring files there")
+# the_command = 'cp -r ./few/files/* ' + folder_path + '/'
+# os.system(the_command)
+# the_command = 'ls ' + folder_path + '/'
+# print(f"Showing the folder '{folder_path}")
+# os.system(the_command)
+
+
+files_src_dir = './few/files/'
+if os.path.exists(files_src_dir):
+    the_command = f'cp -r {files_src_dir}* {folder_path}/'
+    os.system(the_command)
+    print(f"The folder '{folder_path}' was created. Transferring files there.")
+else:
+    print("No 'files' directory yet. It will be downloaded.")
+
+print(f"Showing the folder '{folder_path}':")
+os.system(f'ls {folder_path}/')

@@ -1261,7 +1261,7 @@ class AmplitudeBaseKerrCircular(ABC):
 class KerrCircular_full(ParallelModuleBase, ABC):
     """Base class for Kerr Circular equatorial waveforms."""
 
-    def attributes_KerrCircular(self):
+    def attributes_KerrCircular_full(self):
         """
         attributes:
             background (str): Spacetime background for this model.
